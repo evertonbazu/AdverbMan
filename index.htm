@@ -166,6 +166,26 @@
             min-height: 0;
         }
 
+        #game-legend {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.3rem 0;
+            font-size: clamp(0.5rem, 2vw, 0.7rem);
+            color: var(--text-color);
+        }
+        
+        .legend-items {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem 1rem;
+        }
+
         #mobile-controls {
             display: none;
             width: 100%;
@@ -263,6 +283,14 @@
         </div>
         <div id="question-display">Carregando pergunta...</div>
         <canvas id="gameCanvas"></canvas>
+        <div id="game-legend">
+            <div class="legend-items">
+                <span>⭐ = +3 Pontos</span>
+                <span>❤️ = +1 Vida</span>
+                <span>🏆 = Superpoder</span>
+            </div>
+            <span>Colete a estrela correta para passar de fase! Se errar, perde uma vida!</span>
+        </div>
       </div>
       <div id="mobile-controls">
         <button class="up">▲</button>
@@ -589,7 +617,7 @@
             const newGhost = new Enemy(
                 pixelPos.x, 
                 pixelPos.y, 
-                GameState.tileSize * 0.8, 
+                GameState.tileSize * 0.9, 
                 GHOST_COLORS[GameState.enemies.length % GHOST_COLORS.length], 
                 speed
             );
@@ -643,7 +671,7 @@
                 if (GameState.level >= 10) {
                     speed += (GameState.level - 9) * 0.05;
                 }
-                GameState.enemies.push(new Enemy(pixelPos.x, pixelPos.y, GameState.tileSize * 0.8, GHOST_COLORS[i % GHOST_COLORS.length], speed));
+                GameState.enemies.push(new Enemy(pixelPos.x, pixelPos.y, GameState.tileSize * 0.9, GHOST_COLORS[i % GHOST_COLORS.length], speed));
             }
             
             GameState.powerUp = null;
@@ -693,9 +721,15 @@
                 const dist = Math.hypot(GameState.player.x - answer.x, GameState.player.y - answer.y);
                 const starRadius = GameState.tileSize * 0.5;
                 if (dist < GameState.player.size / 2 + starRadius) {
-                    if (answer.isCorrect) { GameState.score += 3; GameState.level++;
-                    } else { GameState.score = Math.max(0, GameState.score - 1); }
-                    setupLevel(true); return;
+                    if (answer.isCorrect) { 
+                        GameState.score += 3; 
+                        GameState.level++;
+                        setupLevel(true);
+                    } else { 
+                        handleLifeLost();
+                        setupLevel(false); 
+                    }
+                    return;
                 }
             });
             

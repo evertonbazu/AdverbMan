@@ -292,121 +292,108 @@
         <button id="back-to-start-button" class="action-button">Voltar</button>
     </div>
 
-    <script>
-        // --- SETUP ---
-        const startScreen = document.getElementById('start-screen');
-        const gameContainer = document.getElementById('game-container');
-        const endScreen = document.getElementById('end-screen');
-        const rankingScreen = document.getElementById('ranking-screen');
-
-        const startButton = document.getElementById('start-button');
-        const restartButton = document.getElementById('restart-button');
-        const rankingButton = document.getElementById('ranking-button');
-        const backToStartButton = document.getElementById('back-to-start-button');
-        
-        const playerNameInput = document.getElementById('playerName');
-
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score');
-        const levelEl = document.getElementById('level');
-        const livesEl = document.getElementById('lives');
-        const questionEl = document.getElementById('question-display');
-        const mobileControls = document.getElementById('mobile-controls');
-        
-        const finalScoreEl = document.getElementById('final-score');
-        const gameDurationEl = document.getElementById('game-duration');
-        const gameDateTimeEl = document.getElementById('game-date-time');
-        const leaderboardListEl = document.getElementById('leaderboard-list');
-        const rankingListEl = document.getElementById('ranking-list');
-        const endTitleEl = document.getElementById('end-title');
-
-        // --- GOOGLE SHEETS INTEGRATION ---
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxMLunxIV6qQD4Fm90TLQTE7Fj0sbU0FWlVkhDN3_irAWufbHiMarfTIYuTzgwl3KnZfg/exec";
-
-        // --- COLOR VARIABLES ---
-        const style = getComputedStyle(document.documentElement);
-        const WALL_COLOR = style.getPropertyValue('--wall-color').trim();
-        const PATH_COLOR = style.getPropertyValue('--path-color').trim();
-        const CORRECT_COLOR = style.getPropertyValue('--correct-color').trim();
-        const INCORRECT_COLOR = style.getPropertyValue('--incorrect-color').trim();
-        const GHOST_COLOR_1 = style.getPropertyValue('--ghost-color-1').trim();
-        const GHOST_COLOR_2 = style.getPropertyValue('--ghost-color-2').trim();
-        const GHOST_COLOR_3 = style.getPropertyValue('--ghost-color-3').trim();
-        const GHOST_COLOR_4 = style.getPropertyValue('--ghost-color-4').trim();
-        const VULNERABLE_GHOST_COLOR = style.getPropertyValue('--vulnerable-ghost-color').trim();
-
-        let score = 0;
-        let level = 1;
-        let lives = 5;
-        let player, enemies, answers, currentQuestion, powerUp;
-        let gameRunning = true;
-        let tileSize;
-        let playerName = "Ana";
-        let isPoweredUp = false;
-        let powerUpTimer;
-        let gameStartTime;
-
-        // --- MAZE LAYOUT ---
-        const mazeLayout = [
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1],
-            [1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1],
-            [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1],
-            [1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1],
-            [1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1],
-            [1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1],
-            [1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1],
-            [1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1],
-            [1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1],
-            [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        ];
-        const PLAYER_START_POS = { x: 1, y: 1 };
-        const GHOST_START_POS = { x: 18, y: 1 };
-
-        // --- GAME DATA ---
-        const adverbs = {
-            afirmacao: ["sim", "certamente", "realmente", "definitivamente", "verdadeiramente", "efetivamente", "claramente", "seguramente", "decerto"],
-            duvida: ["talvez", "quiçá", "possivelmente", "provavelmente", "eventualmente", "acaso"],
-            negacao: ["não", "nunca", "jamais", "tampouco"],
-            tempo: ["hoje", "ontem", "amanhã", "agora", "cedo", "tarde", "logo", "imediatamente", "brevemente", "recentemente", "outrora", "anteriormente", "posteriormente", "ultimamente"],
-            frequencia: ["sempre", "frequentemente", "raramente", "ocasionalmente", "diariamente", "periodicamente", "constantemente", "esporadicamente"],
-            modo: ["bem", "mal", "depressa", "devagar", "rapidamente", "lentamente", "cuidadosamente", "calmamente", "facilmente", "suavemente"],
-            lugar: ["aqui", "ali", "lá", "cá", "perto", "longe", "acima", "abaixo", "dentro", "fora", "adiante", "atrás", "acolá"],
-            intensidade: ["muito", "pouco", "bastante", "demais", "mais", "menos", "extremamente", "totalmente", "completamente", "absolutamente"]
-        };
-        const adverbTypes = Object.keys(adverbs);
-
-        function generateQuestion() {
-            const correctType = adverbTypes[Math.floor(Math.random() * adverbTypes.length)];
-            const correctAdverb = adverbs[correctType][Math.floor(Math.random() * adverbs[correctType].length)];
-            const options = [correctAdverb];
-            const incorrectTypes = adverbTypes.filter(t => t !== correctType);
-            while (options.length < 3) {
-                const randomType = incorrectTypes[Math.floor(Math.random() * incorrectTypes.length)];
-                const randomAdverb = adverbs[randomType][Math.floor(Math.random() * adverbs[randomType].length)];
-                if (!options.includes(randomAdverb)) { options.push(randomAdverb); }
+    <script type="module">
+      document.addEventListener('DOMContentLoaded', () => {
+        // =================================================================
+        // MÓDULO DE CONFIGURAÇÃO (config.js)
+        // =================================================================
+        const Config = {
+            SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxMLunxIV6qQD4Fm90TLQTE7Fj0sbU0FWlVkhDN3_irAWufbHiMarfTIYuTzgwl3KnZfg/exec",
+            MAZE_LAYOUT: [
+                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1],
+                [1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1],
+                [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1],
+                [1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1],
+                [1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1],
+                [1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1],
+                [1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1],
+                [1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1],
+                [1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1],
+                [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            ],
+            PLAYER_START_POS: { x: 1, y: 1 },
+            GHOST_START_POS: { x: 18, y: 1 },
+            ADVERBS: {
+                afirmacao: ["sim", "certamente", "realmente", "definitivamente", "verdadeiramente", "efetivamente", "claramente", "seguramente", "decerto"],
+                duvida: ["talvez", "quiçá", "possivelmente", "provavelmente", "eventualmente", "acaso"],
+                negacao: ["não", "nunca", "jamais", "tampouco"],
+                tempo: ["hoje", "ontem", "amanhã", "agora", "cedo", "tarde", "logo", "imediatamente", "brevemente", "recentemente", "outrora", "anteriormente", "posteriormente", "ultimamente"],
+                frequencia: ["sempre", "frequentemente", "raramente", "ocasionalmente", "diariamente", "periodicamente", "constantemente", "esporadicamente"],
+                modo: ["bem", "mal", "depressa", "devagar", "rapidamente", "lentamente", "cuidadosamente", "calmamente", "facilmente", "suavemente"],
+                lugar: ["aqui", "ali", "lá", "cá", "perto", "longe", "acima", "abaixo", "dentro", "fora", "adiante", "atrás", "acolá"],
+                intensidade: ["muito", "pouco", "bastante", "demais", "mais", "menos", "extremamente", "totalmente", "completamente", "absolutamente"]
             }
-            let questionTextType = correctType.toUpperCase();
-            if (correctType === 'frequencia') { questionTextType = "FREQUÊNCIA (TEMPO)"; }
-            return { question: `Qual é o advérbio de ${questionTextType}?`, options: options.sort(() => Math.random() - 0.5), correct: correctAdverb };
-        }
+        };
 
-        // --- CLASSES ---
+        // =================================================================
+        // MÓDULO DE ELEMENTOS DA UI (ui.js)
+        // =================================================================
+        const UI = {
+            startScreen: document.getElementById('start-screen'),
+            gameContainer: document.getElementById('game-container'),
+            endScreen: document.getElementById('end-screen'),
+            rankingScreen: document.getElementById('ranking-screen'),
+            startButton: document.getElementById('start-button'),
+            restartButton: document.getElementById('restart-button'),
+            rankingButton: document.getElementById('ranking-button'),
+            backToStartButton: document.getElementById('back-to-start-button'),
+            playerNameInput: document.getElementById('playerName'),
+            canvas: document.getElementById('gameCanvas'),
+            ctx: document.getElementById('gameCanvas').getContext('2d'),
+            scoreEl: document.getElementById('score'),
+            levelEl: document.getElementById('level'),
+            livesEl: document.getElementById('lives'),
+            questionEl: document.getElementById('question-display'),
+            mobileControls: document.getElementById('mobile-controls'),
+            finalScoreEl: document.getElementById('final-score'),
+            gameDurationEl: document.getElementById('game-duration'),
+            gameDateTimeEl: document.getElementById('game-date-time'),
+            leaderboardListEl: document.getElementById('leaderboard-list'),
+            rankingListEl: document.getElementById('ranking-list'),
+            endTitleEl: document.getElementById('end-title'),
+            hud: document.getElementById('hud'),
+        };
+
+        // =================================================================
+        // MÓDULO DE ESTADO DO JOGO (gameState.js)
+        // =================================================================
+        const GameState = {
+            score: 0,
+            level: 1,
+            lives: 5,
+            player: null,
+            enemies: [],
+            answers: [],
+            collectibleStars: [],
+            currentQuestion: null,
+            powerUp: null,
+            gameRunning: true,
+            tileSize: 0,
+            playerName: "Ana",
+            isPoweredUp: false,
+            powerUpTimer: null,
+            gameStartTime: null,
+            levelTimer: null,
+        };
+
+        // =================================================================
+        // MÓDULO DE CLASSES (classes.js)
+        // =================================================================
         class Player {
             constructor(x, y, size, speed) { this.x = x; this.y = y; this.size = size; this.speed = speed; this.dx = 0; this.dy = 0; this.visible = true; }
             draw() {
                 if (!this.visible) return;
-                const s = this.size; ctx.save(); ctx.translate(this.x, this.y);
-                ctx.fillStyle = '#A52A2A'; ctx.beginPath(); ctx.arc(0, -s/4, s/2.5, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(-s/2.5, -s/4, s/1.25, s/4);
-                ctx.fillStyle = '#FFDAB9'; ctx.beginPath(); ctx.arc(0, 0, s / 3, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(-s / 10, -s / 20, s / 20, 0, Math.PI * 2); ctx.arc(s / 10, -s / 20, s / 20, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#87CEEB'; ctx.beginPath(); ctx.moveTo(-s/4, s/4); ctx.lineTo(s/4, s/4); ctx.lineTo(s/3, s/2); ctx.lineTo(-s/3, s/2); ctx.closePath(); ctx.fill();
-                ctx.restore();
+                const s = this.size; UI.ctx.save(); UI.ctx.translate(this.x, this.y);
+                UI.ctx.fillStyle = '#A52A2A'; UI.ctx.beginPath(); UI.ctx.arc(0, -s/4, s/2.5, 0, Math.PI * 2); UI.ctx.fill(); UI.ctx.fillRect(-s/2.5, -s/4, s/1.25, s/4);
+                UI.ctx.fillStyle = '#FFDAB9'; UI.ctx.beginPath(); UI.ctx.arc(0, 0, s / 3, 0, Math.PI * 2); UI.ctx.fill();
+                UI.ctx.fillStyle = 'black'; UI.ctx.beginPath(); UI.ctx.arc(-s / 10, -s / 20, s / 20, 0, Math.PI * 2); UI.ctx.arc(s / 10, -s / 20, s / 20, 0, Math.PI * 2); UI.ctx.fill();
+                UI.ctx.fillStyle = '#87CEEB'; UI.ctx.beginPath(); UI.ctx.moveTo(-s/4, s/4); UI.ctx.lineTo(s/4, s/4); UI.ctx.lineTo(s/3, s/2); UI.ctx.lineTo(-s/3, s/2); UI.ctx.closePath(); UI.ctx.fill();
+                UI.ctx.restore();
             }
             update() {
                 const nextX = this.x + this.dx; const nextY = this.y + this.dy;
@@ -417,9 +404,9 @@
                 const buffer = this.size / 2;
                 const corners = [ { x: x - buffer, y: y - buffer }, { x: x + buffer, y: y - buffer }, { x: x - buffer, y: y + buffer }, { x: x + buffer, y: y + buffer },];
                 for (const corner of corners) {
-                    const gridX = Math.floor(corner.x / tileSize); const gridY = Math.floor(corner.y / tileSize);
-                    if (gridX < 0 || gridX >= mazeLayout[0].length || gridY < 0 || gridY >= mazeLayout.length) return true;
-                    if (mazeLayout[gridY][gridX] === 1) return true;
+                    const gridX = Math.floor(corner.x / GameState.tileSize); const gridY = Math.floor(corner.y / GameState.tileSize);
+                    if (gridX < 0 || gridX >= Config.MAZE_LAYOUT[0].length || gridY < 0 || gridY >= Config.MAZE_LAYOUT.length) return true;
+                    if (Config.MAZE_LAYOUT[gridY][gridX] === 1) return true;
                 }
                 return false;
             }
@@ -432,19 +419,21 @@
                 this.isVulnerable = false; this.dx = 0; this.dy = 0; this.chooseNewDirection();
             }
             draw() {
-                ctx.fillStyle = this.isVulnerable ? VULNERABLE_GHOST_COLOR : this.color; ctx.beginPath(); const s = this.size;
-                ctx.arc(this.x, this.y, s / 2, Math.PI, 0); ctx.lineTo(this.x + s / 2, this.y + s / 2); ctx.lineTo(this.x + s / 2.5, this.y + s / 3); ctx.lineTo(this.x + s / 5, this.y + s / 2); ctx.lineTo(this.x, this.y + s / 3); ctx.lineTo(this.x - s / 5, this.y + s / 2); ctx.lineTo(this.x - s / 2.5, this.y + s / 3); ctx.lineTo(this.x - s / 2, this.y + s / 2); ctx.closePath(); ctx.fill();
-                ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(this.x - s/5, this.y - s/8, s/6, 0, Math.PI * 2); ctx.arc(this.x + s/5, this.y - s/8, s/6, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(this.x - s/5, this.y - s/8, s/12, 0, Math.PI * 2); ctx.arc(this.x + s/5, this.y - s/8, s/12, 0, Math.PI * 2); ctx.fill();
+                const style = getComputedStyle(document.documentElement);
+                const VULNERABLE_GHOST_COLOR = style.getPropertyValue('--vulnerable-ghost-color').trim();
+                UI.ctx.fillStyle = this.isVulnerable ? VULNERABLE_GHOST_COLOR : this.color; UI.ctx.beginPath(); const s = this.size;
+                UI.ctx.arc(this.x, this.y, s / 2, Math.PI, 0); UI.ctx.lineTo(this.x + s / 2, this.y + s / 2); UI.ctx.lineTo(this.x + s / 2.5, this.y + s / 3); UI.ctx.lineTo(this.x + s / 5, this.y + s / 2); UI.ctx.lineTo(this.x, this.y + s / 3); UI.ctx.lineTo(this.x - s / 5, this.y + s / 2); UI.ctx.lineTo(this.x - s / 2.5, this.y + s / 3); UI.ctx.lineTo(this.x - s / 2, this.y + s / 2); UI.ctx.closePath(); UI.ctx.fill();
+                UI.ctx.fillStyle = 'white'; UI.ctx.beginPath(); UI.ctx.arc(this.x - s/5, this.y - s/8, s/6, 0, Math.PI * 2); UI.ctx.arc(this.x + s/5, this.y - s/8, s/6, 0, Math.PI * 2); UI.ctx.fill();
+                UI.ctx.fillStyle = 'black'; UI.ctx.beginPath(); UI.ctx.arc(this.x - s/5, this.y - s/8, s/12, 0, Math.PI * 2); UI.ctx.arc(this.x + s/5, this.y - s/8, s/12, 0, Math.PI * 2); UI.ctx.fill();
             }
             update() {
                 const nextX = this.x + this.dx; const nextY = this.y + this.dy;
                 if (this.checkWallCollision(nextX, nextY)) { this.chooseNewDirection(); } else { this.x = nextX; this.y = nextY; }
             }
             checkWallCollision(x, y) {
-                 const gridX = Math.floor(x / tileSize); const gridY = Math.floor(y / tileSize); const buffer = this.size / 2;
-                 if (x - buffer < 0 || x + buffer > canvas.width || y - buffer < 0 || y + buffer > canvas.height) return true;
-                 return mazeLayout[gridY][gridX] === 1;
+                 const gridX = Math.floor(x / GameState.tileSize); const gridY = Math.floor(y / GameState.tileSize); const buffer = this.size / 2;
+                 if (x - buffer < 0 || x + buffer > UI.canvas.width || y - buffer < 0 || y + buffer > UI.canvas.height) return true;
+                 return Config.MAZE_LAYOUT[gridY][gridX] === 1;
             }
             chooseNewDirection() {
                 const directions = [ { dx: 0, dy: -this.speed }, { dx: 0, dy: this.speed }, { dx: -this.speed, dy: 0 }, { dx: this.speed, dy: 0 }, ];
@@ -452,7 +441,7 @@
                 this.dx = newDirection.dx; this.dy = newDirection.dy;
             }
             reset() {
-                const pos = toPixels(GHOST_START_POS.x, GHOST_START_POS.y);
+                const pos = toPixels(Config.GHOST_START_POS.x, Config.GHOST_START_POS.y);
                 this.x = pos.x;
                 this.y = pos.y;
             }
@@ -466,42 +455,81 @@
                 const textFontSize = this.size * 0.4;
                 const textYOffset = starSize * 0.6;
 
-                ctx.font = `${starSize}px 'Press Start 2P'`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(star, this.x, this.y);
+                UI.ctx.font = `${starSize}px 'Press Start 2P'`;
+                UI.ctx.textAlign = 'center';
+                UI.ctx.textBaseline = 'middle';
+                UI.ctx.fillText(star, this.x, this.y);
 
-                ctx.font = `${textFontSize}px 'Press Start 2P'`;
-                const textWidth = ctx.measureText(this.text).width;
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                ctx.fillRect(this.x - textWidth / 2 - 4, this.y + textYOffset - textFontSize / 2 - 2, textWidth + 8, textFontSize + 4);
+                UI.ctx.font = `${textFontSize}px 'Press Start 2P'`;
+                const textWidth = UI.ctx.measureText(this.text).width;
+                const padding = 4;
+                const fullWidth = textWidth + padding * 2;
+                
+                let rectX = this.x - fullWidth / 2;
+                
+                if (rectX < 0) rectX = 0;
+                if (rectX + fullWidth > UI.canvas.width) rectX = UI.canvas.width - fullWidth;
+                
+                const rectY = this.y + textYOffset - textFontSize / 2 - (padding / 2);
 
-                ctx.fillStyle = '#FFF';
-                ctx.fillText(this.text, this.x, this.y + textYOffset);
+                UI.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                UI.ctx.fillRect(rectX, rectY, fullWidth, textFontSize + padding);
+
+                UI.ctx.fillStyle = '#FFF';
+                UI.ctx.textAlign = 'left';
+                UI.ctx.textBaseline = 'middle';
+                UI.ctx.fillText(this.text, rectX + padding, this.y + textYOffset);
             }
         }
         
         class PowerUp {
             constructor(x, y, size, type) { this.x = x; this.y = y; this.size = size; this.type = type; }
             draw() {
-                ctx.font = `${this.size}px 'Press Start 2P'`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                UI.ctx.font = `${this.size}px 'Press Start 2P'`; UI.ctx.textAlign = 'center'; UI.ctx.textBaseline = 'middle';
                 const emoji = this.type === 'heart' ? '❤️' : '🏆';
-                ctx.fillText(emoji, this.x, this.y);
+                UI.ctx.fillText(emoji, this.x, this.y);
+            }
+        }
+        
+        class CollectibleStar {
+            constructor(x, y, size) { this.x = x; this.y = y; this.size = size; }
+            draw() {
+                UI.ctx.font = `${this.size * 0.7}px 'Press Start 2P'`; UI.ctx.textAlign = 'center'; UI.ctx.textBaseline = 'middle';
+                UI.ctx.fillText('⭐', this.x, this.y);
             }
         }
 
-        // --- GAME FUNCTIONS ---
-        function toPixels(gridX, gridY) { return { x: gridX * tileSize + tileSize / 2, y: gridY * tileSize + tileSize / 2 }; }
+        // =================================================================
+        // MÓDULO PRINCIPAL DO JOGO (game.js)
+        // =================================================================
+        function generateQuestion() {
+            const adverbTypes = Object.keys(Config.ADVERBS);
+            const correctType = adverbTypes[Math.floor(Math.random() * adverbTypes.length)];
+            const correctAdverb = Config.ADVERBS[correctType][Math.floor(Math.random() * Config.ADVERBS[correctType].length)];
+            const options = [correctAdverb];
+            const incorrectTypes = adverbTypes.filter(t => t !== correctType);
+            while (options.length < 3) {
+                const randomType = incorrectTypes[Math.floor(Math.random() * incorrectTypes.length)];
+                const randomAdverb = Config.ADVERBS[randomType][Math.floor(Math.random() * Config.ADVERBS[randomType].length)];
+                if (!options.includes(randomAdverb)) { options.push(randomAdverb); }
+            }
+            let questionTextType = correctType.toUpperCase();
+            if (correctType === 'frequencia') { questionTextType = "FREQUÊNCIA (TEMPO)"; }
+            return { question: `Qual é o advérbio de ${questionTextType}?`, options: options.sort(() => Math.random() - 0.5), correct: correctAdverb };
+        }
+
+        function toPixels(gridX, gridY) { return { x: gridX * GameState.tileSize + GameState.tileSize / 2, y: gridY * GameState.tileSize + GameState.tileSize / 2 }; }
+        
         function resizeCanvas() {
             const container = document.getElementById('game-container-inner');
-            const hudHeight = document.getElementById('hud').offsetHeight;
-            const questionHeight = document.getElementById('question-display').offsetHeight;
-            const mobileControlsHeight = document.getElementById('mobile-controls').offsetHeight;
+            const hudHeight = UI.hud.offsetHeight;
+            const questionHeight = UI.questionEl.offsetHeight;
+            const mobileControlsHeight = UI.mobileControls.offsetHeight;
             
             const availableHeight = window.innerHeight - hudHeight - questionHeight - mobileControlsHeight - 20;
             const availableWidth = container.clientWidth;
 
-            const aspectWidth = mazeLayout[0].length; const aspectHeight = mazeLayout.length;
+            const aspectWidth = Config.MAZE_LAYOUT[0].length; const aspectHeight = Config.MAZE_LAYOUT.length;
             
             let newWidth = availableWidth;
             let newHeight = newWidth * (aspectHeight / aspectWidth);
@@ -511,14 +539,15 @@
                 newWidth = newHeight * (aspectWidth / aspectHeight);
             }
             
-            canvas.width = newWidth; canvas.height = newHeight; tileSize = canvas.width / mazeLayout[0].length;
-            if (player) setupLevel(false);
+            UI.canvas.width = newWidth; UI.canvas.height = newHeight; GameState.tileSize = UI.canvas.width / Config.MAZE_LAYOUT[0].length;
+            if (GameState.player) setupLevel(false);
         }
         
         function drawMaze() {
-            for (let y = 0; y < mazeLayout.length; y++) {
-                for (let x = 0; x < mazeLayout[y].length; x++) {
-                    if (mazeLayout[y][x] === 1) { ctx.fillStyle = WALL_COLOR; ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize); }
+            const WALL_COLOR = getComputedStyle(document.documentElement).getPropertyValue('--wall-color').trim();
+            for (let y = 0; y < Config.MAZE_LAYOUT.length; y++) {
+                for (let x = 0; x < Config.MAZE_LAYOUT[y].length; x++) {
+                    if (Config.MAZE_LAYOUT[y][x] === 1) { UI.ctx.fillStyle = WALL_COLOR; UI.ctx.fillRect(x * GameState.tileSize, y * GameState.tileSize, GameState.tileSize, GameState.tileSize); }
                 }
             }
         }
@@ -527,97 +556,156 @@
             let x, y;
             let isOccupied;
             do {
-                x = Math.floor(Math.random() * mazeLayout[0].length);
-                y = Math.floor(Math.random() * mazeLayout.length);
-                isOccupied = occupied.some(p => p.x === x && p.y === y) || mazeLayout[y][x] === 1;
+                x = Math.floor(Math.random() * Config.MAZE_LAYOUT[0].length);
+                y = Math.floor(Math.random() * Config.MAZE_LAYOUT.length);
+                isOccupied = occupied.some(p => p.x === x && p.y === y) || Config.MAZE_LAYOUT[y][x] === 1;
             } while (isOccupied);
             return { x, y };
         }
 
         function updateHUD() {
-            scoreEl.textContent = `Pontos: ${score}`; levelEl.textContent = `Nível: ${level}`; livesEl.innerHTML = 'Vidas: ' + '❤️'.repeat(lives);
+            UI.scoreEl.textContent = `Pontos: ${GameState.score}`; 
+            UI.levelEl.textContent = `Nível: ${GameState.level}`; 
+            UI.livesEl.innerHTML = 'Vidas: ' + '❤️'.repeat(GameState.lives);
+        }
+
+        function addExtraGhost() {
+            if (!GameState.gameRunning) return;
+
+            const style = getComputedStyle(document.documentElement);
+            const GHOST_COLORS = [
+                style.getPropertyValue('--ghost-color-1').trim(),
+                style.getPropertyValue('--ghost-color-2').trim(),
+                style.getPropertyValue('--ghost-color-3').trim(),
+                style.getPropertyValue('--ghost-color-4').trim()
+            ];
+            
+            const pixelPos = toPixels(Config.GHOST_START_POS.x, Config.GHOST_START_POS.y);
+            let speed = 1 + (GameState.level * 0.1);
+            if (GameState.level >= 10) {
+                speed += (GameState.level - 9) * 0.05;
+            }
+
+            const newGhost = new Enemy(
+                pixelPos.x, 
+                pixelPos.y, 
+                GameState.tileSize * 0.8, 
+                GHOST_COLORS[GameState.enemies.length % GHOST_COLORS.length], 
+                speed
+            );
+
+            if (GameState.isPoweredUp) {
+                newGhost.isVulnerable = true;
+            }
+
+            GameState.enemies.push(newGhost);
         }
 
         function setupLevel(newQuestion = true) {
-            gameRunning = true;
-            if (newQuestion) { currentQuestion = generateQuestion(); }
+            GameState.gameRunning = true;
+            if (newQuestion) { GameState.currentQuestion = generateQuestion(); }
             
-            questionEl.textContent = currentQuestion.question;
+            UI.questionEl.textContent = GameState.currentQuestion.question;
             updateHUD();
             
-            let occupiedGrids = [PLAYER_START_POS, GHOST_START_POS];
+            let occupiedGrids = [Config.PLAYER_START_POS, Config.GHOST_START_POS];
 
-            const playerPos = toPixels(PLAYER_START_POS.x, PLAYER_START_POS.y);
-            player = new Player(playerPos.x, playerPos.y, tileSize * 0.7, 2);
+            const playerPos = toPixels(Config.PLAYER_START_POS.x, Config.PLAYER_START_POS.y);
+            GameState.player = new Player(playerPos.x, playerPos.y, GameState.tileSize * 0.55, 2);
 
-            answers = [];
-            currentQuestion.options.forEach((optionText) => {
+            GameState.answers = [];
+            GameState.currentQuestion.options.forEach((optionText) => {
                 const gridPos = getEmptyLocation(occupiedGrids);
                 occupiedGrids.push(gridPos);
                 if(gridPos.x > 0) occupiedGrids.push({x: gridPos.x - 1, y: gridPos.y});
-                if(gridPos.x < mazeLayout[0].length - 1) occupiedGrids.push({x: gridPos.x + 1, y: gridPos.y});
+                if(gridPos.x < Config.MAZE_LAYOUT[0].length - 1) occupiedGrids.push({x: gridPos.x + 1, y: gridPos.y});
+                if(gridPos.y > 0) occupiedGrids.push({x: gridPos.x, y: gridPos.y - 1});
+                if(gridPos.y < Config.MAZE_LAYOUT.length - 1) occupiedGrids.push({x: gridPos.x, y: gridPos.y + 1});
 
                 const pixelPos = toPixels(gridPos.x, gridPos.y);
-                const answer = new Answer(pixelPos.x, pixelPos.y, tileSize, optionText);
-                answer.isCorrect = (optionText === currentQuestion.correct);
-                answers.push(answer);
+                const answer = new Answer(pixelPos.x, pixelPos.y, GameState.tileSize, optionText);
+                answer.isCorrect = (optionText === GameState.currentQuestion.correct);
+                GameState.answers.push(answer);
             });
             
-            enemies = [];
-            const enemyColors = [GHOST_COLOR_1, GHOST_COLOR_2, GHOST_COLOR_3, GHOST_COLOR_4];
-            for (let i = 0; i < level; i++) {
-                const pixelPos = toPixels(GHOST_START_POS.x, GHOST_START_POS.y);
-                const speed = 1 + (level * 0.1);
-                enemies.push(new Enemy(pixelPos.x, pixelPos.y, tileSize * 0.8, enemyColors[i % enemyColors.length], speed));
+            const style = getComputedStyle(document.documentElement);
+            const GHOST_COLORS = [
+                style.getPropertyValue('--ghost-color-1').trim(),
+                style.getPropertyValue('--ghost-color-2').trim(),
+                style.getPropertyValue('--ghost-color-3').trim(),
+                style.getPropertyValue('--ghost-color-4').trim()
+            ];
+
+            GameState.enemies = [];
+            for (let i = 0; i < GameState.level; i++) {
+                const pixelPos = toPixels(Config.GHOST_START_POS.x, Config.GHOST_START_POS.y);
+                let speed = 1 + (GameState.level * 0.1);
+                if (GameState.level >= 10) {
+                    speed += (GameState.level - 9) * 0.05;
+                }
+                GameState.enemies.push(new Enemy(pixelPos.x, pixelPos.y, GameState.tileSize * 0.8, GHOST_COLORS[i % GHOST_COLORS.length], speed));
             }
             
-            powerUp = null;
-            if (level > 1) {
-                if (level % 2 === 0) {
-                    if (Math.random() < 0.75) { // 75% chance for heart on even levels
+            GameState.powerUp = null;
+            if (GameState.level > 1) {
+                if (GameState.level % 2 === 0) {
+                    if (Math.random() < 0.75) {
                         const gridPos = getEmptyLocation(occupiedGrids);
                         occupiedGrids.push(gridPos);
                         const pixelPos = toPixels(gridPos.x, gridPos.y);
-                        powerUp = new PowerUp(pixelPos.x, pixelPos.y, tileSize, 'heart');
+                        GameState.powerUp = new PowerUp(pixelPos.x, pixelPos.y, GameState.tileSize, 'heart');
                     }
                 } else {
-                    if (Math.random() < 0.6) { // 60% chance for trophy on odd levels
+                    if (Math.random() < 0.6) {
                         const gridPos = getEmptyLocation(occupiedGrids);
                         occupiedGrids.push(gridPos);
                         const pixelPos = toPixels(gridPos.x, gridPos.y);
-                        powerUp = new PowerUp(pixelPos.x, pixelPos.y, tileSize, 'trophy');
+                        GameState.powerUp = new PowerUp(pixelPos.x, pixelPos.y, GameState.tileSize, 'trophy');
                     }
                 }
             }
+            
+            GameState.collectibleStars = [];
+            const starCount = 1 + Math.floor(GameState.level / 3);
+            for(let i = 0; i < starCount; i++) {
+                const gridPos = getEmptyLocation(occupiedGrids);
+                occupiedGrids.push(gridPos);
+                const pixelPos = toPixels(gridPos.x, gridPos.y);
+                GameState.collectibleStars.push(new CollectibleStar(pixelPos.x, pixelPos.y, GameState.tileSize));
+            }
+
+            clearInterval(GameState.levelTimer);
+            GameState.levelTimer = setInterval(addExtraGhost, 30000);
         }
         
         function handleLifeLost() {
-            lives--; updateHUD();
-            if (lives <= 0) { endGame(false); return; }
+            GameState.lives--; 
+            updateHUD();
+            if (GameState.lives <= 0) { endGame(false); return; }
             
-            const playerPos = toPixels(PLAYER_START_POS.x, PLAYER_START_POS.y);
-            player.x = playerPos.x; player.y = playerPos.y;
-            enemies.forEach(enemy => enemy.reset());
+            const playerPos = toPixels(Config.PLAYER_START_POS.x, Config.PLAYER_START_POS.y);
+            GameState.player.x = playerPos.x; GameState.player.y = playerPos.y;
+            GameState.enemies.forEach(enemy => enemy.reset());
         }
 
         function checkCollisions() {
-            answers.forEach((answer) => {
-                const dist = Math.hypot(player.x - answer.x, player.y - answer.y);
-                const starRadius = tileSize * 0.5;
-                if (dist < player.size / 2 + starRadius) {
-                    if (answer.isCorrect) { score += 3; level++;
-                    } else { score = Math.max(0, score - 1); }
+            GameState.answers.forEach((answer) => {
+                const dist = Math.hypot(GameState.player.x - answer.x, GameState.player.y - answer.y);
+                const starRadius = GameState.tileSize * 0.5;
+                if (dist < GameState.player.size / 2 + starRadius) {
+                    if (answer.isCorrect) { GameState.score += 3; GameState.level++;
+                    } else { GameState.score = Math.max(0, GameState.score - 1); }
                     setupLevel(true); return;
                 }
             });
             
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                const enemy = enemies[i];
-                const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
-                if (dist < player.size / 2 + enemy.size / 2) {
-                    if (isPoweredUp) {
-                        score += 20;
-                        enemies.splice(i, 1);
+            for (let i = GameState.enemies.length - 1; i >= 0; i--) {
+                const enemy = GameState.enemies[i];
+                const dist = Math.hypot(GameState.player.x - enemy.x, GameState.player.y - enemy.y);
+                if (dist < GameState.player.size / 2 + enemy.size / 2) {
+                    if (GameState.isPoweredUp) {
+                        GameState.score += 5;
+                        GameState.enemies.splice(i, 1);
                     } else {
                         handleLifeLost();
                         break; 
@@ -625,75 +713,80 @@
                 }
             }
 
-            if (powerUp) {
-                const dist = Math.hypot(player.x - powerUp.x, player.y - powerUp.y);
-                if (dist < player.size / 2 + powerUp.size / 2) {
-                    if (powerUp.type === 'heart') {
-                        lives++; updateHUD();
-                    } else if (powerUp.type === 'trophy') {
-                        isPoweredUp = true;
-                        enemies.forEach(e => e.isVulnerable = true);
-                        clearTimeout(powerUpTimer);
-                        powerUpTimer = setTimeout(() => {
-                            isPoweredUp = false;
-                            enemies.forEach(e => e.isVulnerable = false);
-                        }, 8000); // 8 seconds
+            if (GameState.powerUp) {
+                const dist = Math.hypot(GameState.player.x - GameState.powerUp.x, GameState.player.y - GameState.powerUp.y);
+                if (dist < GameState.player.size / 2 + GameState.powerUp.size / 2) {
+                    if (GameState.powerUp.type === 'heart') {
+                        GameState.lives++; updateHUD();
+                    } else if (GameState.powerUp.type === 'trophy') {
+                        GameState.isPoweredUp = true;
+                        GameState.enemies.forEach(e => e.isVulnerable = true);
+                        clearTimeout(GameState.powerUpTimer);
+                        GameState.powerUpTimer = setTimeout(() => {
+                            GameState.isPoweredUp = false;
+                            GameState.enemies.forEach(e => e.isVulnerable = false);
+                        }, 30000);
                     }
-                    powerUp = null;
+                    GameState.powerUp = null;
+                }
+            }
+
+            for (let i = GameState.collectibleStars.length - 1; i >= 0; i--) {
+                const star = GameState.collectibleStars[i];
+                const dist = Math.hypot(GameState.player.x - star.x, GameState.player.y - star.y);
+                if (dist < GameState.player.size / 2 + star.size / 2) {
+                    GameState.score += 3;
+                    updateHUD();
+                    GameState.collectibleStars.splice(i, 1);
                 }
             }
         }
         
         function endGame(isWinner) {
-            gameRunning = false;
+            GameState.gameRunning = false;
+            clearInterval(GameState.levelTimer);
             const gameEndTime = new Date();
-            const gameDurationSeconds = Math.round((gameEndTime - gameStartTime) / 1000);
+            const gameDurationSeconds = Math.round((gameEndTime - GameState.gameStartTime) / 1000);
 
-            gameContainer.style.display = 'none';
-            endScreen.style.display = 'flex';
+            UI.gameContainer.style.display = 'none';
+            UI.endScreen.style.display = 'flex';
             
-            endTitleEl.textContent = isWinner ? `Parabéns, ${playerName}!` : 'Fim de Jogo!';
-            finalScoreEl.textContent = `Sua Pontuação: ${score}`;
-            gameDurationEl.textContent = `Tempo de Jogo: ${gameDurationSeconds} segundos`;
-            gameDateTimeEl.textContent = `Realizado em: ${gameEndTime.toLocaleDateString('pt-BR')} às ${gameEndTime.toLocaleTimeString('pt-BR')}`;
+            UI.endTitleEl.textContent = isWinner ? `Parabéns, ${GameState.playerName}!` : 'Fim de Jogo!';
+            UI.finalScoreEl.textContent = `Sua Pontuação: ${GameState.score}`;
+            UI.gameDurationEl.textContent = `Tempo de Jogo: ${gameDurationSeconds} segundos`;
+            UI.gameDateTimeEl.textContent = `Realizado em: ${gameEndTime.toLocaleDateString('pt-BR')} às ${gameEndTime.toLocaleTimeString('pt-BR')}`;
             
             const finalGameData = {
                 date: gameEndTime.toLocaleString('pt-BR'),
                 playerClass: document.getElementById('playerClass').value,
-                playerName: playerName,
-                score: score,
+                playerName: GameState.playerName,
+                score: GameState.score,
                 time: gameDurationSeconds
             };
 
             sendDataToSheet(finalGameData);
             saveScoreToLocal(gameEndTime);
-            displayLocalScores(leaderboardListEl, 5); // Mostra top 5 no final
+            displayLocalScores(UI.leaderboardListEl, 5);
         }
         
         async function sendDataToSheet(data) {
-            if (!SCRIPT_URL) {
+            if (!Config.SCRIPT_URL) {
                 console.log("URL do Apps Script não configurada. Dados não serão enviados.");
                 return;
             }
-
             try {
-                await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                await fetch(Config.SCRIPT_URL, {
+                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
                 });
-            } catch (error) {
-                console.error("Erro ao enviar dados para a planilha:", error);
-            }
+            } catch (error) { console.error("Erro ao enviar dados para a planilha:", error); }
         }
 
         function saveScoreToLocal(date) {
-            const scoreData = { name: playerName, score: score, date: date.toISOString() };
+            const scoreData = { name: GameState.playerName, score: GameState.score, date: date.toISOString() };
             let highScores = JSON.parse(localStorage.getItem('adverbManHighScores')) || [];
             highScores.push(scoreData);
             highScores.sort((a, b) => b.score - a.score);
-            highScores = highScores.slice(0, 20); // Keep top 20
+            highScores = highScores.slice(0, 20);
             localStorage.setItem('adverbManHighScores', JSON.stringify(highScores));
         }
 
@@ -712,44 +805,44 @@
             }
         }
 
-        function resetGame() { window.location.reload(); }
-
         function gameLoop() {
-            if (!gameRunning) return;
-            ctx.fillStyle = PATH_COLOR; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            if (!GameState.gameRunning) return;
+            const PATH_COLOR = getComputedStyle(document.documentElement).getPropertyValue('--path-color').trim();
+            UI.ctx.fillStyle = PATH_COLOR; UI.ctx.fillRect(0, 0, UI.canvas.width, UI.canvas.height);
             drawMaze();
-            if (powerUp) { powerUp.draw(); }
-            answers.forEach(answer => answer.draw());
-            player.update(); player.draw();
-            enemies.forEach(enemy => { enemy.update(); enemy.draw(); });
+            if (GameState.powerUp) { GameState.powerUp.draw(); }
+            GameState.collectibleStars.forEach(star => star.draw());
+            GameState.answers.forEach(answer => answer.draw());
+            GameState.player.update(); GameState.player.draw();
+            GameState.enemies.forEach(enemy => { enemy.update(); enemy.draw(); });
             checkCollisions();
             requestAnimationFrame(gameLoop);
         }
 
         // --- CONTROLS ---
         function handleKeyDown(e) {
-            if (!player || !e || !e.key) return;
-            if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') player.changeDirection(0, -1);
-            else if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') player.changeDirection(0, 1);
-            else if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') player.changeDirection(-1, 0);
-            else if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') player.changeDirection(1, 0);
+            if (!GameState.player || !e || !e.key) return;
+            if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') GameState.player.changeDirection(0, -1);
+            else if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') GameState.player.changeDirection(0, 1);
+            else if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') GameState.player.changeDirection(-1, 0);
+            else if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') GameState.player.changeDirection(1, 0);
         }
         function handleKeyUp(e) {
-             if (!player || !e || !e.key) return;
-             if (['arrowup', 'w', 'arrowdown', 's', 'arrowleft', 'a', 'arrowright', 'd'].includes(e.key.toLowerCase())) { player.changeDirection(0, 0); }
+             if (!GameState.player || !e || !e.key) return;
+             if (['arrowup', 'w', 'arrowdown', 's', 'arrowleft', 'a', 'arrowright', 'd'].includes(e.key.toLowerCase())) { GameState.player.changeDirection(0, 0); }
         }
         function setupMobileControls() {
             const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
             if (isTouchDevice) {
-                mobileControls.style.display = 'grid';
-                const buttons = mobileControls.querySelectorAll('button');
+                UI.mobileControls.style.display = 'grid';
+                const buttons = UI.mobileControls.querySelectorAll('button');
                 buttons.forEach(button => {
                     const press = (e) => {
                         e.preventDefault(); const direction = button.className;
-                        if (direction === 'up') player.changeDirection(0, -1); if (direction === 'down') player.changeDirection(0, 1);
-                        if (direction === 'left') player.changeDirection(-1, 0); if (direction === 'right') player.changeDirection(1, 0);
+                        if (direction === 'up') GameState.player.changeDirection(0, -1); if (direction === 'down') GameState.player.changeDirection(0, 1);
+                        if (direction === 'left') GameState.player.changeDirection(-1, 0); if (direction === 'right') GameState.player.changeDirection(1, 0);
                     };
-                    const release = (e) => { e.preventDefault(); player.changeDirection(0, 0); };
+                    const release = (e) => { e.preventDefault(); GameState.player.changeDirection(0, 0); };
                     button.addEventListener('touchstart', press); button.addEventListener('mousedown', press);
                     button.addEventListener('touchend', release); button.addEventListener('mouseup', release);
                     button.addEventListener('mouseleave', release);
@@ -757,14 +850,14 @@
             }
         }
 
-        // --- INITIALIZATION ---
+        // --- INITIALIZATION & SCREEN MANAGEMENT ---
         function startGame() {
-            playerName = playerNameInput.value || "Ana";
-            gameStartTime = new Date();
-            startScreen.style.display = 'none';
-            gameContainer.style.display = 'flex';
-            endScreen.style.display = 'none';
-            rankingScreen.style.display = 'none';
+            GameState.playerName = UI.playerNameInput.value || "Ana";
+            GameState.gameStartTime = new Date();
+            UI.startScreen.style.display = 'none';
+            UI.gameContainer.style.display = 'flex';
+            UI.endScreen.style.display = 'none';
+            UI.rankingScreen.style.display = 'none';
             resizeCanvas();
             setupLevel(true);
             setupMobileControls();
@@ -772,53 +865,55 @@
         }
 
         async function showRanking() {
-            startScreen.style.display = 'none';
-            rankingScreen.style.display = 'flex';
-            rankingListEl.innerHTML = '<li>Carregando ranking...</li>';
+            UI.startScreen.style.display = 'none';
+            UI.rankingScreen.style.display = 'flex';
+            UI.rankingListEl.innerHTML = '<li>Carregando ranking...</li>';
 
-            if (!SCRIPT_URL) {
-                rankingListEl.innerHTML = '<li>Ranking online indisponível.</li>';
+            if (!Config.SCRIPT_URL) {
+                UI.rankingListEl.innerHTML = '<li>Ranking online indisponível.</li>';
                 return;
             }
 
             try {
-                const response = await fetch(SCRIPT_URL);
+                const response = await fetch(Config.SCRIPT_URL);
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    rankingListEl.innerHTML = '';
+                    UI.rankingListEl.innerHTML = '';
                     if (result.data.length === 0) {
-                        rankingListEl.innerHTML = '<li>Nenhuma pontuação registrada ainda.</li>';
+                        UI.rankingListEl.innerHTML = '<li>Nenhuma pontuação registrada ainda.</li>';
                     } else {
                         result.data.forEach(s => {
                             const li = document.createElement('li');
                             li.innerHTML = `<span class="score-name">${s.Nome}</span> <span>${s.Pontuação} pts</span>`;
-                            rankingListEl.appendChild(li);
+                            UI.rankingListEl.appendChild(li);
                         });
                     }
                 } else {
-                    rankingListEl.innerHTML = `<li>Erro ao carregar ranking.</li>`;
+                    UI.rankingListEl.innerHTML = `<li>Erro ao carregar ranking.</li>`;
                 }
             } catch (error) {
                 console.error("Erro ao buscar ranking:", error);
-                rankingListEl.innerHTML = '<li>Não foi possível conectar ao ranking.</li>';
+                UI.rankingListEl.innerHTML = '<li>Não foi possível conectar ao ranking.</li>';
             }
         }
 
         function showStartScreen() {
-            startScreen.style.display = 'flex';
-            rankingScreen.style.display = 'none';
+            UI.startScreen.style.display = 'flex';
+            UI.rankingScreen.style.display = 'none';
         }
+        
+        function resetGame() { window.location.reload(); }
 
-        startButton.addEventListener('click', startGame);
-        restartButton.addEventListener('click', resetGame);
-        rankingButton.addEventListener('click', showRanking);
-        backToStartButton.addEventListener('click', showStartScreen);
+        UI.startButton.addEventListener('click', startGame);
+        UI.restartButton.addEventListener('click', resetGame);
+        UI.rankingButton.addEventListener('click', showRanking);
+        UI.backToStartButton.addEventListener('click', showStartScreen);
 
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
         window.addEventListener('resize', () => { resizeCanvas(); });
-        
+      });
     </script>
 </body>
 </html>
